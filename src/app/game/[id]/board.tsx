@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { makeMove } from "./actions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
@@ -12,7 +11,6 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
   const [roomState, setRoomState] = useState(initialRoomState);
   const [gameStatus, setGameStatus] = useState(status);
   const [gameWinnerId, setGameWinnerId] = useState(winnerId);
-  const [answerInput, setAnswerInput] = useState("");
 
   useEffect(() => {
     const channel = pusherClient.subscribe(`game-${gameId}`);
@@ -20,7 +18,6 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
       setRoomState(data.roomState);
       setGameStatus(data.status);
       setGameWinnerId(data.winnerId);
-      setAnswerInput("");
     });
 
     return () => {
@@ -28,11 +25,9 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
     };
   }, [gameId]);
 
-  const handleMakeMove = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!answerInput) return;
+  const handleMakeMove = async (amount: number) => {
     try {
-      await makeMove(gameId, parseInt(answerInput));
+      await makeMove(gameId, amount);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -48,7 +43,7 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
         <div className="text-xl font-bold">
           {player1.username}: <span className="text-green-500">{roomState.scores[player1.id] || 0}</span>
         </div>
-        <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">First to 3 wins</div>
+        <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">Wins</div>
         <div className="text-xl font-bold">
           {player2.username}: <span className="text-purple-500">{roomState.scores[player2.id] || 0}</span>
         </div>
@@ -67,31 +62,40 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
       </div>
 
       <Card className="p-8 w-full shadow-lg border-t-4 border-t-indigo-500 flex flex-col items-center">
+        <div className="text-2xl text-slate-500 font-bold mb-2 uppercase tracking-widest">
+          Target: {roomState.target}
+        </div>
+        <div className="text-6xl md:text-8xl font-black mb-8 text-slate-800 dark:text-slate-100">
+          {roomState.currentSum}
+        </div>
+
         {gameStatus === "playing" ? (
-          <>
-            <div className="text-4xl md:text-6xl font-mono mb-8">
-              {roomState.problem.num1} {roomState.problem.operator} {roomState.problem.num2} = ?
-            </div>
-            <form onSubmit={handleMakeMove} className="flex flex-col md:flex-row gap-4 w-full justify-center items-center">
-              <Input
-                type="number"
-                value={answerInput}
-                onChange={e => setAnswerInput(e.target.value)}
-                placeholder="Enter answer..."
-                className="w-full md:w-64 text-2xl h-14 text-center"
-                disabled={!isMyTurn}
-                autoFocus={isMyTurn}
-              />
-              <Button 
-                type="submit"
-                disabled={!isMyTurn}
-                size="lg"
-                className="w-full md:w-48 text-lg h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg"
-              >
-                Submit Answer
-              </Button>
-            </form>
-          </>
+          <div className="flex gap-4">
+            <Button 
+              onClick={() => handleMakeMove(1)}
+              disabled={!isMyTurn}
+              size="lg"
+              className="w-24 h-24 text-4xl rounded-2xl bg-blue-500 hover:bg-blue-600 shadow-md"
+            >
+              +1
+            </Button>
+            <Button 
+              onClick={() => handleMakeMove(2)}
+              disabled={!isMyTurn}
+              size="lg"
+              className="w-24 h-24 text-4xl rounded-2xl bg-indigo-500 hover:bg-indigo-600 shadow-md"
+            >
+              +2
+            </Button>
+            <Button 
+              onClick={() => handleMakeMove(3)}
+              disabled={!isMyTurn}
+              size="lg"
+              className="w-24 h-24 text-4xl rounded-2xl bg-purple-500 hover:bg-purple-600 shadow-md"
+            >
+              +3
+            </Button>
+          </div>
         ) : (
           <div className="text-3xl text-slate-500">Match concluded.</div>
         )}
@@ -118,8 +122,8 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
             return (
               <div key={idx} className="text-md flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded">
                 <span className="font-semibold text-indigo-600 dark:text-indigo-400">{pName}</span>
-                <span className={`font-mono px-2 py-1 rounded text-sm tracking-widest ${move.correct ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-                  {move.problem} = {move.answer} {move.correct ? '✅' : '❌'}
+                <span className="font-mono px-3 py-1 bg-slate-200 dark:bg-slate-700 rounded text-sm font-bold">
+                  +{move.amountAdded} ➔ {move.newSum}
                 </span>
               </div>
             );
