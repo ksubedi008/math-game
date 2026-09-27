@@ -48,8 +48,8 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
   const selectedSum = selected.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="flex flex-col items-center gap-8 p-6 w-full max-w-4xl">
-      <div className="text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 p-2">
+    <div className="flex flex-col items-center gap-6 md:gap-8 p-4 md:p-8 w-full max-w-4xl">
+      <div className="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 p-2 text-center">
         {gameStatus === "playing" ? (
           <span>
             {isMyTurn ? "Your turn!" : `Waiting for ${currentTurnPlayer}...`}
@@ -61,15 +61,15 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
         )}
       </div>
 
-      <Card className="p-8 w-full shadow-lg border-t-4 border-t-indigo-500">
-        <div className="flex flex-wrap gap-4 justify-center">
+      <Card className="p-4 md:p-8 w-full shadow-lg border-t-4 border-t-indigo-500">
+        <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-8 gap-2 md:gap-4 justify-items-center">
           {roomState.board.map((num: number) => (
             <Button
               key={num}
               variant={selected.includes(num) ? "default" : "outline"}
               onClick={() => toggleSelect(num)}
               disabled={!isMyTurn || gameStatus !== "playing"}
-              className={`w-16 h-16 text-xl rounded-2xl transition-all duration-200 ${selected.includes(num) ? 'scale-110 shadow-md bg-indigo-600 hover:bg-indigo-700' : 'hover:border-indigo-400'}`}
+              className={`w-12 h-12 text-base md:w-16 md:h-16 md:text-xl rounded-xl md:rounded-2xl transition-all duration-200 ${selected.includes(num) ? 'scale-110 shadow-md bg-indigo-600 hover:bg-indigo-700' : 'hover:border-indigo-400'}`}
             >
               {num}
             </Button>
@@ -77,18 +77,28 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
         </div>
       </Card>
 
-      <div className="text-center flex flex-col items-center gap-4">
-        <div className="text-2xl font-mono bg-slate-200 dark:bg-slate-800 px-6 py-2 rounded-full shadow-inner">
+      <div className="text-center flex flex-col items-center gap-4 w-full">
+        <div className="text-xl md:text-2xl font-mono bg-slate-200 dark:bg-slate-800 px-6 py-2 rounded-full shadow-inner">
           Sum: <span className={selectedSum === 30 ? "text-green-600 font-bold" : ""}>{selectedSum}</span> / 30
         </div>
-        <Button 
-          onClick={handleMakeMove} 
-          disabled={!isMyTurn || gameStatus !== "playing" || selectedSum !== 30}
-          size="lg"
-          className="w-64 text-lg h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg"
-        >
-          Submit Move
-        </Button>
+        <div className="flex flex-col md:flex-row gap-3 md:gap-4 w-full justify-center items-center">
+          <Button 
+            onClick={handleMakeMove} 
+            disabled={!isMyTurn || gameStatus !== "playing" || selectedSum !== 30}
+            size="lg"
+            className="w-full md:w-64 text-lg h-12 md:h-14 bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 shadow-lg"
+          >
+            Submit Move
+          </Button>
+          <Button 
+            onClick={() => window.location.href = '/dashboard'}
+            size="lg"
+            variant="destructive"
+            className="w-full md:w-64 text-lg h-12 md:h-14 shadow-lg"
+          >
+            Surrender
+          </Button>
+        </div>
       </div>
 
       <div className="w-full max-w-md bg-white dark:bg-slate-900 border p-5 rounded-xl h-[250px] overflow-y-auto mt-6 shadow-sm">

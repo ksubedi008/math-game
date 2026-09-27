@@ -24,8 +24,8 @@ export function AdminLogin() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-900">
-      <Card className="w-[400px]">
+    <div className="min-h-screen flex items-center justify-center bg-slate-900 p-4">
+      <Card className="w-full max-w-[400px]">
         <CardHeader>
           <CardTitle>Admin Access</CardTitle>
         </CardHeader>

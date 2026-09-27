@@ -20,8 +20,8 @@ export default async function GamePage({ params }: { params: { id: string } }) {
   const p2 = await db.select().from(users).where(eq(users.id, game.player2Id)).then(r => r[0]);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center py-12 px-4 sm:px-8">
-      <div className="w-full max-w-5xl flex justify-between items-center mb-10 px-8 py-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col items-center p-4 md:p-8">
+      <div className="w-full max-w-5xl flex flex-col md:flex-row justify-between items-center gap-4 mb-6 md:mb-10 px-4 md:px-8 py-4 bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
         <div className="flex flex-col items-center">
           <span className="text-sm text-slate-500 uppercase tracking-widest font-bold">Player 1</span>
           <span className="text-2xl font-black text-indigo-600">{p1.username}</span>

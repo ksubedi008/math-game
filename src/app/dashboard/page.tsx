@@ -42,12 +42,12 @@ export default async function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-6 md:p-12">
-      <div className="max-w-4xl mx-auto space-y-8">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 p-4 md:p-8">
+      <div className="max-w-4xl mx-auto space-y-6 md:space-y-8">
         
-        <header className="flex items-center justify-between">
+        <header className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
+            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight text-slate-900 dark:text-white">
               Welcome, {userRecord.username}!
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -56,7 +56,7 @@ export default async function DashboardPage() {
           </div>
         </header>
 
-        <div className="grid md:grid-cols-3 gap-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-8">
           <div className="md:col-span-2 space-y-6">
             <FriendRequests requests={pendingRequestsRaw} />
             <FriendsList friends={friendsData} />
