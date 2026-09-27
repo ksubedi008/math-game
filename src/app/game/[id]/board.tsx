@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { Button } from "@/components/ui/button";
 import { submitMove } from "./actions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
+import { Loader2 } from "lucide-react";
 
 export function GameBoard({ 
   gameId, 
@@ -28,6 +29,8 @@ export function GameBoard({
   const [player2Score, setPlayer2Score] = useState<number>(initialPlayer2Score);
   
   const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
+  const [isPending, startTransition] = useTransition();
+  const [isLeaving, setIsLeaving] = useState(false);
 
   useEffect(() => {
     const channel = pusherClient.subscribe(`game-${gameId}`);
@@ -49,7 +52,7 @@ export function GameBoard({
   const isMyTurn = roomState.turn === currentUserId;
 
   const handleToggleNumber = (num: number) => {
-    if (!isMyTurn || gameStatus !== "playing") return;
+    if (!isMyTurn || gameStatus !== "playing" || isPending) return;
     if (selectedOptions.includes(num)) {
       setSelectedOptions(selectedOptions.filter(n => n !== num));
     } else {
@@ -57,22 +60,29 @@ export function GameBoard({
     }
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = () => {
     if (selectedOptions.length < 2) {
       toast.error("Please select at least two numbers.");
       return;
     }
-    try {
-      const res = await submitMove(gameId, selectedOptions);
-      if (res?.isCorrect) {
-        toast.success("Correct! Point awarded.");
-      } else {
-        toast.error("Incorrect sum. Turn lost.");
+    startTransition(async () => {
+      try {
+        const res = await submitMove(gameId, selectedOptions);
+        if (res?.isCorrect) {
+          toast.success("Correct! Point awarded.");
+        } else {
+          toast.error("Incorrect sum. Turn lost.");
+        }
+        setSelectedOptions([]);
+      } catch (err: any) {
+        toast.error(err.message);
       }
-      setSelectedOptions([]);
-    } catch (err: any) {
-      toast.error(err.message);
-    }
+    });
+  };
+
+  const handleLeave = () => {
+    setIsLeaving(true);
+    window.location.href = '/dashboard';
   };
 
   const currentTurnPlayer = roomState.turn === player1.id ? player1.username : player2.username;
@@ -135,7 +145,7 @@ export function GameBoard({
               <Button 
                 key={num}
                 onClick={() => handleToggleNumber(num)}
-                disabled={!isMyTurn || gameStatus !== "playing"}
+                disabled={!isMyTurn || gameStatus !== "playing" || isPending}
                 variant={isSelected ? "default" : "outline"}
                 className={`w-14 h-14 md:w-16 md:h-16 md:text-lg transition-all duration-300 font-bold ${isSelected ? 'bg-indigo-600 hover:bg-indigo-700 text-white scale-110 shadow-md border-2 border-indigo-300' : 'hover:border-indigo-500 hover:text-indigo-600'}`}
               >
@@ -148,23 +158,38 @@ export function GameBoard({
         {gameStatus === "playing" && (
           <Button 
             onClick={handleSubmit}
-            disabled={!isMyTurn || selectedOptions.length < 2}
+            disabled={!isMyTurn || selectedOptions.length < 2 || isPending}
             size="lg"
-            className="w-full max-w-sm text-xl h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md"
+            className="w-full max-w-sm text-xl h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md flex items-center justify-center"
           >
-            Submit Move
+            {isPending ? (
+              <>
+                <Loader2 className="mr-2 h-6 w-6 animate-spin" />
+                Submitting...
+              </>
+            ) : (
+              "Submit Move"
+            )}
           </Button>
         )}
       </Card>
 
       <div className="text-center mt-6 w-full max-w-sm">
         <Button 
-          onClick={() => window.location.href = '/dashboard'}
+          onClick={handleLeave}
+          disabled={isLeaving}
           size="lg"
           variant="destructive"
-          className="w-full text-lg shadow-lg"
+          className="w-full text-lg shadow-lg flex items-center justify-center"
         >
-          Leave Match
+          {isLeaving ? (
+            <>
+              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+              Leaving...
+            </>
+          ) : (
+            "Leave Match"
+          )}
         </Button>
       </div>
 
