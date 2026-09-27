@@ -137,9 +137,9 @@ export function GameBoard({
                 onClick={() => handleToggleNumber(num)}
                 disabled={!isMyTurn || gameStatus !== "playing"}
                 variant={isSelected ? "default" : "outline"}
-                className={`w-10 h-10 md:w-14 md:h-14 md:text-lg transition-all duration-300 font-bold ${isSelected ? 'bg-indigo-600 hover:bg-indigo-700 text-white scale-110 shadow-md' : 'hover:border-indigo-500 hover:text-indigo-600'}`}
+                className={`w-14 h-14 md:w-16 md:h-16 md:text-lg transition-all duration-300 font-bold ${isSelected ? 'bg-indigo-600 hover:bg-indigo-700 text-white scale-110 shadow-md border-2 border-indigo-300' : 'hover:border-indigo-500 hover:text-indigo-600'}`}
               >
-                {num}
+                {isSelected ? `${num} ✕` : num}
               </Button>
             );
           })}

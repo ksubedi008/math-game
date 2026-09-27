@@ -55,6 +55,8 @@ export async function acceptFriendRequest(friendshipId: string) {
   revalidatePath("/dashboard");
 }
 
+import { pusherServer } from "@/lib/pusher";
+
 export async function challengeFriend(friendId: string, targetNumber: number) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
@@ -70,12 +72,41 @@ export async function challengeFriend(friendId: string, targetNumber: number) {
     player1Id: session.user.id,
     player2Id: friendId,
     roomState: initialRoomState,
-    status: "playing",
+    status: "pending",
     targetNumber,
     availableNumbers,
     player1Score: 0,
     player2Score: 0
   }).returning();
 
-  redirect(`/game/${newGame[0].id}`);
+  const gameId = newGame[0].id;
+  
+  await pusherServer.trigger(`user-${friendId}`, "game-challenge", {
+    gameId,
+    targetNumber,
+    challengerName: session.user.name || session.user.email || "Someone" // Need username ideally
+  });
+
+  return { success: true, gameId };
 }
+
+export async function acceptGame(gameId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  
+  await db.update(games).set({ status: "playing" }).where(eq(games.id, gameId));
+  
+  await pusherServer.trigger(`game-${gameId}`, "game-started", {});
+  return { success: true };
+}
+
+export async function declineGame(gameId: string) {
+  const session = await auth();
+  if (!session?.user?.id) throw new Error("Unauthorized");
+  
+  await db.delete(games).where(eq(games.id, gameId));
+  
+  await pusherServer.trigger(`game-${gameId}`, "game-declined", {});
+  return { success: true };
+}
+

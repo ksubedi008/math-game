@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
-import { searchUsers, sendFriendRequest, acceptFriendRequest, challengeFriend } from "./actions";
+import { useState, useEffect } from "react";
+import { searchUsers, sendFriendRequest, acceptFriendRequest, challengeFriend, acceptGame, declineGame } from "./actions";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { pusherClient } from "@/lib/pusher-client";
 
 export function SearchUsers() {
   const [query, setQuery] = useState("");
@@ -87,17 +88,70 @@ export function FriendRequests({ requests }: { requests: {id: string, requester:
   );
 }
 
-export function FriendsList({ friends }: { friends: {id: string, username: string}[] }) {
-  const [targetNumber, setTargetNumber] = useState<number>(50);
+export function FriendsList({ friends, currentUserId }: { friends: {id: string, username: string}[], currentUserId: string }) {
+  const [targetNumberInput, setTargetNumberInput] = useState<string>("50");
+  const [pendingChallenge, setPendingChallenge] = useState<any>(null); // For receiving a challenge
+  const [waitingGameId, setWaitingGameId] = useState<string | null>(null); // For challenger waiting for accept
+
+  useEffect(() => {
+    const channel = pusherClient.subscribe(`user-${currentUserId}`);
+    channel.bind("game-challenge", (data: any) => {
+      setPendingChallenge(data);
+    });
+
+    return () => {
+      pusherClient.unsubscribe(`user-${currentUserId}`);
+    };
+  }, [currentUserId]);
+
+  useEffect(() => {
+    if (waitingGameId) {
+      const channel = pusherClient.subscribe(`game-${waitingGameId}`);
+      channel.bind("game-started", () => {
+        window.location.href = `/game/${waitingGameId}`;
+      });
+      channel.bind("game-declined", () => {
+        toast.error("Challenge declined.");
+        setWaitingGameId(null);
+      });
+      return () => {
+        pusherClient.unsubscribe(`game-${waitingGameId}`);
+      };
+    }
+  }, [waitingGameId]);
 
   const handleChallenge = async (id: string) => {
-    if (targetNumber < 5) {
+    const target = parseInt(targetNumberInput, 10);
+    if (isNaN(target) || target < 5) {
       toast.error("Target number must be at least 5.");
       return;
     }
-    const result = (await challengeFriend(id, targetNumber)) as unknown as { error?: string };
+    const result = (await challengeFriend(id, target)) as unknown as { error?: string, gameId?: string };
     if (result?.error) {
       toast.error(result.error);
+    } else if (result?.gameId) {
+      setWaitingGameId(result.gameId);
+      toast.success("Challenge sent! Waiting for response...");
+    }
+  };
+
+  const onAcceptChallenge = async () => {
+    if (!pendingChallenge) return;
+    try {
+      await acceptGame(pendingChallenge.gameId);
+      window.location.href = `/game/${pendingChallenge.gameId}`;
+    } catch (err: any) {
+      toast.error(err.message);
+    }
+  };
+
+  const onDeclineChallenge = async () => {
+    if (!pendingChallenge) return;
+    try {
+      await declineGame(pendingChallenge.gameId);
+      setPendingChallenge(null);
+    } catch (err: any) {
+      toast.error(err.message);
     }
   };
 
@@ -107,6 +161,25 @@ export function FriendsList({ friends }: { friends: {id: string, username: strin
         <CardTitle>Your Friends</CardTitle>
       </CardHeader>
       <CardContent>
+        {pendingChallenge && (
+          <div className="mb-6 p-4 bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 rounded-xl shadow-sm flex items-center justify-between">
+            <div>
+              <p className="font-bold text-indigo-900 dark:text-indigo-100">{pendingChallenge.challengerName} challenged you!</p>
+              <p className="text-sm text-indigo-700 dark:text-indigo-300">Target: {pendingChallenge.targetNumber}</p>
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" variant="outline" onClick={onDeclineChallenge}>Decline</Button>
+              <Button size="sm" className="bg-indigo-600 hover:bg-indigo-700 text-white" onClick={onAcceptChallenge}>Accept</Button>
+            </div>
+          </div>
+        )}
+
+        {waitingGameId && (
+          <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl flex items-center justify-center">
+            <span className="font-medium text-amber-800 dark:text-amber-200 animate-pulse">Waiting for friend to accept...</span>
+          </div>
+        )}
+
         {friends.length === 0 ? (
           <p className="text-muted-foreground text-sm">You have no friends yet. Search for some above!</p>
         ) : (
@@ -116,8 +189,8 @@ export function FriendsList({ friends }: { friends: {id: string, username: strin
               <Input 
                 type="number" 
                 min={5} 
-                value={targetNumber} 
-                onChange={(e) => setTargetNumber(parseInt(e.target.value) || 50)} 
+                value={targetNumberInput} 
+                onChange={(e) => setTargetNumberInput(e.target.value)} 
                 className="w-24"
               />
             </div>
@@ -129,7 +202,11 @@ export function FriendsList({ friends }: { friends: {id: string, username: strin
                   </Avatar>
                   <span className="font-semibold text-lg">{friend.username}</span>
                 </div>
-                <Button onClick={() => handleChallenge(friend.id)} className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md">
+                <Button 
+                  onClick={() => handleChallenge(friend.id)} 
+                  disabled={!!waitingGameId}
+                  className="bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white shadow-md disabled:opacity-50"
+                >
                   Challenge
                 </Button>
               </div>
