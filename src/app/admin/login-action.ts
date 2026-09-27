@@ -6,7 +6,6 @@ import { redirect } from "next/navigation";
 export async function loginAction(formData: FormData) {
   const passphrase = formData.get("passphrase")?.toString();
 
-  // FIX: Added "passphrase &&" to guarantee it is not undefined before checking
   if (passphrase && passphrase === process.env.ADMIN_PASSPHRASE) {
     const cookieStore = await cookies();
     
@@ -22,3 +21,6 @@ export async function loginAction(formData: FormData) {
 
   return { error: "Invalid passphrase" };
 }
+
+// Alias export to satisfy admin-login.tsx
+export const loginAdmin = loginAction;
