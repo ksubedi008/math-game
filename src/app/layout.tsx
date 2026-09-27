@@ -20,6 +20,8 @@ export const metadata: Metadata = {
   description: "Real-time multiplayer math game",
 };
 
+import { Footer } from "@/components/footer";
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
@@ -27,13 +29,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
-      <body className="min-h-full flex flex-col">
+      <body className="flex flex-col min-h-screen">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <Providers>
             {children}
             <Toaster />
           </Providers>
         </ThemeProvider>
+        <Footer />
       </body>
     </html>
   );
