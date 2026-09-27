@@ -44,8 +44,8 @@ export default async function GamePage({ params }: { params: Promise<{ id: strin
         player1={{ id: p1.id, username: p1.username }}
         player2={{ id: p2.id, username: p2.username }}
         initialAvailableNumbers={game.availableNumbers}
-        initialPlayer1Hand={game.player1Hand}
-        initialPlayer2Hand={game.player2Hand}
+        initialPlayer1Score={game.player1Score}
+        initialPlayer2Score={game.player2Score}
         targetNumber={game.targetNumber}
       />
     </div>

@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { pusherClient } from "@/lib/pusher-client";
 import { Button } from "@/components/ui/button";
-import { makeMove } from "./actions";
+import { submitMove } from "./actions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 
@@ -16,16 +16,18 @@ export function GameBoard({
   player1, 
   player2,
   initialAvailableNumbers,
-  initialPlayer1Hand,
-  initialPlayer2Hand,
+  initialPlayer1Score,
+  initialPlayer2Score,
   targetNumber
 }: any) {
   const [roomState, setRoomState] = useState(initialRoomState);
   const [gameStatus, setGameStatus] = useState(status);
   const [gameWinnerId, setGameWinnerId] = useState(winnerId);
   const [availableNumbers, setAvailableNumbers] = useState<number[]>(initialAvailableNumbers);
-  const [player1Hand, setPlayer1Hand] = useState<number[]>(initialPlayer1Hand);
-  const [player2Hand, setPlayer2Hand] = useState<number[]>(initialPlayer2Hand);
+  const [player1Score, setPlayer1Score] = useState<number>(initialPlayer1Score);
+  const [player2Score, setPlayer2Score] = useState<number>(initialPlayer2Score);
+  
+  const [selectedOptions, setSelectedOptions] = useState<number[]>([]);
 
   useEffect(() => {
     const channel = pusherClient.subscribe(`game-${gameId}`);
@@ -34,8 +36,9 @@ export function GameBoard({
       setGameStatus(data.status);
       setGameWinnerId(data.winnerId);
       setAvailableNumbers(data.availableNumbers);
-      setPlayer1Hand(data.player1Hand);
-      setPlayer2Hand(data.player2Hand);
+      setPlayer1Score(data.player1Score);
+      setPlayer2Score(data.player2Score);
+      setSelectedOptions([]);
     });
 
     return () => {
@@ -43,24 +46,57 @@ export function GameBoard({
     };
   }, [gameId]);
 
-  const handleMakeMove = async (num: number) => {
+  const isMyTurn = roomState.turn === currentUserId;
+
+  const handleToggleNumber = (num: number) => {
+    if (!isMyTurn || gameStatus !== "playing") return;
+    if (selectedOptions.includes(num)) {
+      setSelectedOptions(selectedOptions.filter(n => n !== num));
+    } else {
+      setSelectedOptions([...selectedOptions, num]);
+    }
+  };
+
+  const handleSubmit = async () => {
+    if (selectedOptions.length < 2) {
+      toast.error("Please select at least two numbers.");
+      return;
+    }
     try {
-      await makeMove(gameId, num);
+      const res = await submitMove(gameId, selectedOptions);
+      if (res?.isCorrect) {
+        toast.success("Correct! Point awarded.");
+      } else {
+        toast.error("Incorrect sum. Turn lost.");
+      }
+      setSelectedOptions([]);
     } catch (err: any) {
       toast.error(err.message);
     }
   };
 
-  const isMyTurn = roomState.turn === currentUserId;
   const currentTurnPlayer = roomState.turn === player1.id ? player1.username : player2.username;
   const isPlayer1 = currentUserId === player1.id;
-  const myHand = isPlayer1 ? player1Hand : player2Hand;
-  const oppHand = isPlayer1 ? player2Hand : player1Hand;
+  const myScore = isPlayer1 ? player1Score : player2Score;
+  const oppScore = isPlayer1 ? player2Score : player1Score;
   const oppName = isPlayer1 ? player2.username : player1.username;
+  const currentSum = selectedOptions.reduce((a, b) => a + b, 0);
 
   return (
-    <div className="flex flex-col items-center gap-6 md:gap-8 p-4 md:p-8 w-full max-w-5xl">
+    <div className="flex flex-col items-center gap-6 md:gap-8 p-4 md:p-8 w-full max-w-3xl">
       
+      <div className="flex w-full justify-between items-center bg-slate-200 dark:bg-slate-800 p-4 rounded-xl mb-4">
+        <div className="text-xl font-bold flex flex-col items-center">
+          <span className="text-sm uppercase text-slate-500">You</span>
+          <span className="text-green-500 text-3xl">{myScore}</span>
+        </div>
+        <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">Score</div>
+        <div className="text-xl font-bold flex flex-col items-center">
+          <span className="text-sm uppercase text-slate-500">{oppName}</span>
+          <span className="text-purple-500 text-3xl">{oppScore}</span>
+        </div>
+      </div>
+
       <div className="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 p-2 text-center">
         {gameStatus === "playing" ? (
           <span>
@@ -68,64 +104,58 @@ export function GameBoard({
           </span>
         ) : (
           <span>
-            Game Over! {gameWinnerId === currentUserId ? "You Won!" : "You Lost!"}
+            Game Over! {gameWinnerId === currentUserId ? "You Won!" : gameWinnerId ? "You Lost!" : "It's a Tie!"}
           </span>
         )}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full">
-        {/* Opponent's Hand */}
-        <div className="md:col-span-1 bg-white dark:bg-slate-900 border p-4 rounded-xl shadow-sm order-2 md:order-1">
-          <h3 className="font-semibold mb-4 text-center border-b pb-2 text-slate-500 uppercase tracking-widest">{oppName}'s Hand</h3>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {oppHand.map((num: number) => (
-              <div key={num} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg font-bold text-slate-500">
-                {num}
-              </div>
-            ))}
-            {oppHand.length === 0 && <span className="text-sm text-slate-400 italic">Empty</span>}
-          </div>
+      <Card className="p-6 md:p-8 w-full shadow-lg border-t-4 border-t-indigo-500 flex flex-col items-center">
+        <div className="text-xl md:text-2xl text-indigo-500 dark:text-indigo-400 font-black mb-2 uppercase tracking-widest">
+          Target: {targetNumber}
         </div>
-
-        {/* The Board */}
-        <div className="md:col-span-2 order-1 md:order-2">
-          <Card className="p-6 md:p-8 w-full shadow-lg border-t-4 border-t-indigo-500 flex flex-col items-center">
-            <div className="text-xl md:text-2xl text-indigo-500 dark:text-indigo-400 font-black mb-6 uppercase tracking-widest">
-              Target: {targetNumber}
-            </div>
+        
+        <div className="text-lg text-slate-500 mb-6 font-semibold">
+          Current Sum: <span className={currentSum === targetNumber ? 'text-green-500 font-black' : currentSum > targetNumber ? 'text-red-500' : 'text-slate-800 dark:text-slate-200'}>{currentSum}</span>
+        </div>
+        
+        <div className="flex flex-wrap justify-center gap-2 md:gap-3 mb-8">
+          {Array.from({ length: targetNumber - 1 }, (_, i) => i + 1).map((num: number) => {
+            const isAvailable = availableNumbers.includes(num);
+            const isSelected = selectedOptions.includes(num);
             
-            <div className="flex flex-wrap justify-center gap-2 md:gap-3">
-              {Array.from({ length: targetNumber - 1 }, (_, i) => i + 1).map((num: number) => {
-                const isAvailable = availableNumbers.includes(num);
-                return (
-                  <Button 
-                    key={num}
-                    onClick={() => handleMakeMove(num)}
-                    disabled={!isAvailable || !isMyTurn || gameStatus !== "playing"}
-                    variant={isAvailable ? "outline" : "secondary"}
-                    className={`w-10 h-10 md:w-14 md:h-14 md:text-lg transition-all duration-300 ${isAvailable ? 'hover:border-indigo-500 hover:text-indigo-600' : 'opacity-30'}`}
-                  >
-                    {num}
-                  </Button>
-                );
-              })}
-            </div>
-          </Card>
+            if (!isAvailable) {
+              return (
+                <div key={num} className="w-10 h-10 md:w-14 md:h-14 md:text-lg flex items-center justify-center rounded-lg opacity-0 pointer-events-none">
+                  {num}
+                </div>
+              );
+            }
+
+            return (
+              <Button 
+                key={num}
+                onClick={() => handleToggleNumber(num)}
+                disabled={!isMyTurn || gameStatus !== "playing"}
+                variant={isSelected ? "default" : "outline"}
+                className={`w-10 h-10 md:w-14 md:h-14 md:text-lg transition-all duration-300 font-bold ${isSelected ? 'bg-indigo-600 hover:bg-indigo-700 text-white scale-110 shadow-md' : 'hover:border-indigo-500 hover:text-indigo-600'}`}
+              >
+                {num}
+              </Button>
+            );
+          })}
         </div>
 
-        {/* My Hand */}
-        <div className="md:col-span-1 bg-white dark:bg-slate-900 border p-4 rounded-xl shadow-sm order-3 md:order-3">
-          <h3 className="font-semibold mb-4 text-center border-b pb-2 text-indigo-500 uppercase tracking-widest">Your Hand</h3>
-          <div className="flex flex-wrap gap-2 justify-center">
-            {myHand.map((num: number) => (
-              <div key={num} className="w-10 h-10 flex items-center justify-center bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-lg font-bold shadow-sm">
-                {num}
-              </div>
-            ))}
-            {myHand.length === 0 && <span className="text-sm text-slate-400 italic">Empty</span>}
-          </div>
-        </div>
-      </div>
+        {gameStatus === "playing" && (
+          <Button 
+            onClick={handleSubmit}
+            disabled={!isMyTurn || selectedOptions.length < 2}
+            size="lg"
+            className="w-full max-w-sm text-xl h-14 bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-600 hover:to-teal-600 shadow-md"
+          >
+            Submit Move
+          </Button>
+        )}
+      </Card>
 
       <div className="text-center mt-6 w-full max-w-sm">
         <Button 

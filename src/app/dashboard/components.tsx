@@ -88,8 +88,14 @@ export function FriendRequests({ requests }: { requests: {id: string, requester:
 }
 
 export function FriendsList({ friends }: { friends: {id: string, username: string}[] }) {
+  const [targetNumber, setTargetNumber] = useState<number>(50);
+
   const handleChallenge = async (id: string) => {
-    const result = (await challengeFriend(id)) as unknown as { error?: string };
+    if (targetNumber < 5) {
+      toast.error("Target number must be at least 5.");
+      return;
+    }
+    const result = (await challengeFriend(id, targetNumber)) as unknown as { error?: string };
     if (result?.error) {
       toast.error(result.error);
     }
@@ -104,7 +110,17 @@ export function FriendsList({ friends }: { friends: {id: string, username: strin
         {friends.length === 0 ? (
           <p className="text-muted-foreground text-sm">You have no friends yet. Search for some above!</p>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-4">
+              <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Set Game Target:</span>
+              <Input 
+                type="number" 
+                min={5} 
+                value={targetNumber} 
+                onChange={(e) => setTargetNumber(parseInt(e.target.value) || 50)} 
+                className="w-24"
+              />
+            </div>
             {friends.map(friend => (
               <div key={friend.id} className="flex items-center justify-between p-3 border rounded-lg hover:shadow-sm transition-all">
                 <div className="flex items-center gap-3">

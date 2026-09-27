@@ -29,7 +29,7 @@ export const games = pgTable("games", {
   winnerId: uuid("winner_id").references(() => users.id),
   targetNumber: integer("target_number").default(50).notNull(),
   availableNumbers: jsonb("available_numbers").$type<number[]>().default([]).notNull(),
-  player1Hand: jsonb("player1_hand").$type<number[]>().default([]).notNull(),
-  player2Hand: jsonb("player2_hand").$type<number[]>().default([]).notNull(),
+  player1Score: integer("player1_score").default(0).notNull(),
+  player2Score: integer("player2_score").default(0).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
