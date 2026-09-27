@@ -1,7 +1,12 @@
-import { auth } from "@/auth";
+import NextAuth from "next-auth";
 import { NextResponse } from "next/server";
 
-export default auth((req) => {
+// FIX: Initialize a lightweight, Edge-only auth instance that bypasses the database
+const { auth: edgeAuth } = NextAuth({
+  providers: [],
+});
+
+export default edgeAuth((req) => {
   const isAuthenticated = !!req.auth;
   const isDashboardOrGame = req.nextUrl.pathname.startsWith("/dashboard") || req.nextUrl.pathname.startsWith("/game");
 
