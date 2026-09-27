@@ -89,7 +89,7 @@ export function FriendRequests({ requests }: { requests: {id: string, requester:
 
 export function FriendsList({ friends }: { friends: {id: string, username: string}[] }) {
   const handleChallenge = async (id: string) => {
-    const result = (await challengeFriend(id)) as { error?: string };
+    const result = (await challengeFriend(id)) as unknown as { error?: string };
     if (result?.error) {
       toast.error(result.error);
     }
