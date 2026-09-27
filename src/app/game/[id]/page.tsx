@@ -5,11 +5,13 @@ import { eq } from "drizzle-orm";
 import { redirect } from "next/navigation";
 import { GameBoard } from "./board";
 
-export default async function GamePage({ params }: { params: { id: string } }) {
+export default async function GamePage({ params }: { params: Promise<{ id: string }> }) {
+  const resolvedParams = await params;
+  const gameId = resolvedParams.id;
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
   
-  const game = await db.select().from(games).where(eq(games.id, params.id)).then(r => r[0]);
+  const game = await db.select().from(games).where(eq(games.id, gameId)).then(r => r[0]);
   if (!game) return <div>Game not found</div>;
 
   if (game.player1Id !== session.user.id && game.player2Id !== session.user.id) {
