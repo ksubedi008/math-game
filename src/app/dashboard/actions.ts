@@ -59,11 +59,11 @@ export async function challengeFriend(friendId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   
+  const targetNumber = 50;
+  const availableNumbers = Array.from({ length: targetNumber - 1 }, (_, i) => i + 1);
+
   const initialRoomState = JSON.stringify({
     turn: session.user.id,
-    scores: { [session.user.id]: 0, [friendId]: 0 },
-    target: 30,
-    currentSum: 0,
     moves: []
   });
 
@@ -71,7 +71,11 @@ export async function challengeFriend(friendId: string) {
     player1Id: session.user.id,
     player2Id: friendId,
     roomState: initialRoomState,
-    status: "playing"
+    status: "playing",
+    targetNumber,
+    availableNumbers,
+    player1Hand: [],
+    player2Hand: []
   }).returning();
 
   redirect(`/game/${newGame[0].id}`);

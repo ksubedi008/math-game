@@ -7,10 +7,25 @@ import { makeMove } from "./actions";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 
-export function GameBoard({ gameId, initialRoomState, status, winnerId, currentUserId, player1, player2 }: any) {
+export function GameBoard({ 
+  gameId, 
+  initialRoomState, 
+  status, 
+  winnerId, 
+  currentUserId, 
+  player1, 
+  player2,
+  initialAvailableNumbers,
+  initialPlayer1Hand,
+  initialPlayer2Hand,
+  targetNumber
+}: any) {
   const [roomState, setRoomState] = useState(initialRoomState);
   const [gameStatus, setGameStatus] = useState(status);
   const [gameWinnerId, setGameWinnerId] = useState(winnerId);
+  const [availableNumbers, setAvailableNumbers] = useState<number[]>(initialAvailableNumbers);
+  const [player1Hand, setPlayer1Hand] = useState<number[]>(initialPlayer1Hand);
+  const [player2Hand, setPlayer2Hand] = useState<number[]>(initialPlayer2Hand);
 
   useEffect(() => {
     const channel = pusherClient.subscribe(`game-${gameId}`);
@@ -18,6 +33,9 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
       setRoomState(data.roomState);
       setGameStatus(data.status);
       setGameWinnerId(data.winnerId);
+      setAvailableNumbers(data.availableNumbers);
+      setPlayer1Hand(data.player1Hand);
+      setPlayer2Hand(data.player2Hand);
     });
 
     return () => {
@@ -25,9 +43,9 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
     };
   }, [gameId]);
 
-  const handleMakeMove = async (amount: number) => {
+  const handleMakeMove = async (num: number) => {
     try {
-      await makeMove(gameId, amount);
+      await makeMove(gameId, num);
     } catch (err: any) {
       toast.error(err.message);
     }
@@ -35,20 +53,14 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
 
   const isMyTurn = roomState.turn === currentUserId;
   const currentTurnPlayer = roomState.turn === player1.id ? player1.username : player2.username;
+  const isPlayer1 = currentUserId === player1.id;
+  const myHand = isPlayer1 ? player1Hand : player2Hand;
+  const oppHand = isPlayer1 ? player2Hand : player1Hand;
+  const oppName = isPlayer1 ? player2.username : player1.username;
 
   return (
-    <div className="flex flex-col items-center gap-6 md:gap-8 p-4 md:p-8 w-full max-w-4xl">
+    <div className="flex flex-col items-center gap-6 md:gap-8 p-4 md:p-8 w-full max-w-5xl">
       
-      <div className="flex w-full justify-between items-center bg-slate-200 dark:bg-slate-800 p-4 rounded-xl mb-4">
-        <div className="text-xl font-bold">
-          {player1.username}: <span className="text-green-500">{roomState.scores[player1.id] || 0}</span>
-        </div>
-        <div className="text-sm uppercase tracking-widest text-slate-500 font-bold">Wins</div>
-        <div className="text-xl font-bold">
-          {player2.username}: <span className="text-purple-500">{roomState.scores[player2.id] || 0}</span>
-        </div>
-      </div>
-
       <div className="text-2xl md:text-3xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-purple-600 p-2 text-center">
         {gameStatus === "playing" ? (
           <span>
@@ -61,78 +73,71 @@ export function GameBoard({ gameId, initialRoomState, status, winnerId, currentU
         )}
       </div>
 
-      <Card className="p-8 w-full shadow-lg border-t-4 border-t-indigo-500 flex flex-col items-center">
-        <div className="text-2xl text-slate-500 font-bold mb-2 uppercase tracking-widest">
-          Target: {roomState.target}
-        </div>
-        <div className="text-6xl md:text-8xl font-black mb-8 text-slate-800 dark:text-slate-100">
-          {roomState.currentSum}
-        </div>
-
-        {gameStatus === "playing" ? (
-          <div className="flex gap-4">
-            <Button 
-              onClick={() => handleMakeMove(1)}
-              disabled={!isMyTurn}
-              size="lg"
-              className="w-24 h-24 text-4xl rounded-2xl bg-blue-500 hover:bg-blue-600 shadow-md"
-            >
-              +1
-            </Button>
-            <Button 
-              onClick={() => handleMakeMove(2)}
-              disabled={!isMyTurn}
-              size="lg"
-              className="w-24 h-24 text-4xl rounded-2xl bg-indigo-500 hover:bg-indigo-600 shadow-md"
-            >
-              +2
-            </Button>
-            <Button 
-              onClick={() => handleMakeMove(3)}
-              disabled={!isMyTurn}
-              size="lg"
-              className="w-24 h-24 text-4xl rounded-2xl bg-purple-500 hover:bg-purple-600 shadow-md"
-            >
-              +3
-            </Button>
-          </div>
-        ) : (
-          <div className="text-3xl text-slate-500">Match concluded.</div>
-        )}
-      </Card>
-
-      <div className="text-center flex flex-col items-center gap-4 w-full">
-        <div className="flex flex-col md:flex-row gap-3 md:gap-4 w-full justify-center items-center">
-          <Button 
-            onClick={() => window.location.href = '/dashboard'}
-            size="lg"
-            variant="destructive"
-            className="w-full md:w-64 text-lg h-12 md:h-14 shadow-lg"
-          >
-            Leave Match
-          </Button>
-        </div>
-      </div>
-
-      <div className="w-full max-w-md bg-white dark:bg-slate-900 border p-5 rounded-xl h-[250px] overflow-y-auto mt-6 shadow-sm">
-        <h3 className="font-semibold mb-4 text-lg text-slate-700 dark:text-slate-300 border-b pb-2">Move History</h3>
-        <div className="space-y-3">
-          {roomState.moves.map((move: any, idx: number) => {
-            const pName = move.player === player1.id ? player1.username : player2.username;
-            return (
-              <div key={idx} className="text-md flex justify-between items-center bg-slate-50 dark:bg-slate-800 p-2 rounded">
-                <span className="font-semibold text-indigo-600 dark:text-indigo-400">{pName}</span>
-                <span className="font-mono px-3 py-1 bg-slate-200 dark:bg-slate-700 rounded text-sm font-bold">
-                  +{move.amountAdded} ➔ {move.newSum}
-                </span>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 w-full">
+        {/* Opponent's Hand */}
+        <div className="md:col-span-1 bg-white dark:bg-slate-900 border p-4 rounded-xl shadow-sm order-2 md:order-1">
+          <h3 className="font-semibold mb-4 text-center border-b pb-2 text-slate-500 uppercase tracking-widest">{oppName}'s Hand</h3>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {oppHand.map((num: number) => (
+              <div key={num} className="w-10 h-10 flex items-center justify-center bg-slate-100 dark:bg-slate-800 rounded-lg font-bold text-slate-500">
+                {num}
               </div>
-            );
-          })}
-          {roomState.moves.length === 0 && (
-            <p className="text-slate-400 italic text-center mt-8">No moves yet. Start the game!</p>
-          )}
+            ))}
+            {oppHand.length === 0 && <span className="text-sm text-slate-400 italic">Empty</span>}
+          </div>
+        </div>
+
+        {/* The Board */}
+        <div className="md:col-span-2 order-1 md:order-2">
+          <Card className="p-6 md:p-8 w-full shadow-lg border-t-4 border-t-indigo-500 flex flex-col items-center">
+            <div className="text-xl md:text-2xl text-indigo-500 dark:text-indigo-400 font-black mb-6 uppercase tracking-widest">
+              Target: {targetNumber}
+            </div>
+            
+            <div className="flex flex-wrap justify-center gap-2 md:gap-3">
+              {Array.from({ length: targetNumber - 1 }, (_, i) => i + 1).map((num: number) => {
+                const isAvailable = availableNumbers.includes(num);
+                return (
+                  <Button 
+                    key={num}
+                    onClick={() => handleMakeMove(num)}
+                    disabled={!isAvailable || !isMyTurn || gameStatus !== "playing"}
+                    variant={isAvailable ? "outline" : "secondary"}
+                    className={`w-10 h-10 md:w-14 md:h-14 md:text-lg transition-all duration-300 ${isAvailable ? 'hover:border-indigo-500 hover:text-indigo-600' : 'opacity-30'}`}
+                  >
+                    {num}
+                  </Button>
+                );
+              })}
+            </div>
+          </Card>
+        </div>
+
+        {/* My Hand */}
+        <div className="md:col-span-1 bg-white dark:bg-slate-900 border p-4 rounded-xl shadow-sm order-3 md:order-3">
+          <h3 className="font-semibold mb-4 text-center border-b pb-2 text-indigo-500 uppercase tracking-widest">Your Hand</h3>
+          <div className="flex flex-wrap gap-2 justify-center">
+            {myHand.map((num: number) => (
+              <div key={num} className="w-10 h-10 flex items-center justify-center bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-lg font-bold shadow-sm">
+                {num}
+              </div>
+            ))}
+            {myHand.length === 0 && <span className="text-sm text-slate-400 italic">Empty</span>}
+          </div>
         </div>
       </div>
+
+      <div className="text-center mt-6 w-full max-w-sm">
+        <Button 
+          onClick={() => window.location.href = '/dashboard'}
+          size="lg"
+          variant="destructive"
+          className="w-full text-lg shadow-lg"
+        >
+          Leave Match
+        </Button>
+      </div>
+
     </div>
   );
 }

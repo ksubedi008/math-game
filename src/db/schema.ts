@@ -1,4 +1,4 @@
-import { pgTable, text, integer, timestamp, uuid } from "drizzle-orm/pg-core";
+import { pgTable, text, integer, timestamp, uuid, jsonb } from "drizzle-orm/pg-core";
 
 // Users table to store player accounts
 export const users = pgTable("users", {
@@ -27,5 +27,9 @@ export const games = pgTable("games", {
   roomState: text("room_state").notNull(), // JSON string to store the current board numbers and whose turn it is
   status: text("status").notNull(), // 'waiting', 'playing', 'finished'
   winnerId: uuid("winner_id").references(() => users.id),
+  targetNumber: integer("target_number").default(50).notNull(),
+  availableNumbers: jsonb("available_numbers").$type<number[]>().default([]).notNull(),
+  player1Hand: jsonb("player1_hand").$type<number[]>().default([]).notNull(),
+  player2Hand: jsonb("player2_hand").$type<number[]>().default([]).notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
