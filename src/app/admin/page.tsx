@@ -6,7 +6,7 @@ import { AdminLogin } from "./admin-login";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 
 export default async function AdminPage() {
-  const cookieStore = cookies();
+  const cookieStore = await cookies();
   const isAdmin = cookieStore.get("admin_auth")?.value === process.env.ADMIN_PASSPHRASE;
 
   if (!isAdmin) {
