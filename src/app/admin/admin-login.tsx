@@ -6,20 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
 
 export function AdminLogin() {
   const [pass, setPass] = useState("");
-  const router = useRouter();
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    try {
-      await loginAdmin(pass);
-      toast.success("Logged in to admin");
-      router.refresh();
-    } catch (err: any) {
-      toast.error(err.message);
+    
+    const result = await loginAdmin(pass);
+    
+    if (result?.error) {
+      toast.error(result.error);
     }
   };
 
