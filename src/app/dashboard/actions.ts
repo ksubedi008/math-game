@@ -55,13 +55,31 @@ export async function acceptFriendRequest(friendshipId: string) {
   revalidatePath("/dashboard");
 }
 
+function generateProblem() {
+  const isAddition = Math.random() > 0.5;
+  let num1 = Math.floor(Math.random() * 100) + 1;
+  let num2 = Math.floor(Math.random() * 100) + 1;
+  if (!isAddition && num1 < num2) {
+    const temp = num1;
+    num1 = num2;
+    num2 = temp;
+  }
+  return {
+    num1,
+    num2,
+    operator: isAddition ? "+" : "-",
+    answer: isAddition ? num1 + num2 : num1 - num2,
+  };
+}
+
 export async function challengeFriend(friendId: string) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   
   const initialRoomState = JSON.stringify({
-    board: Array.from({ length: 29 }, (_, i) => i + 1),
     turn: session.user.id,
+    scores: { [session.user.id]: 0, [friendId]: 0 },
+    problem: generateProblem(),
     moves: []
   });
 

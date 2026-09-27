@@ -6,7 +6,24 @@ import { games, users } from "@/db/schema";
 import { eq } from "drizzle-orm";
 import { pusherServer } from "@/lib/pusher";
 
-export async function makeMove(gameId: string, selectedNumbers: number[]) {
+function generateProblem() {
+  const isAddition = Math.random() > 0.5;
+  let num1 = Math.floor(Math.random() * 100) + 1;
+  let num2 = Math.floor(Math.random() * 100) + 1;
+  if (!isAddition && num1 < num2) {
+    const temp = num1;
+    num1 = num2;
+    num2 = temp;
+  }
+  return {
+    num1,
+    num2,
+    operator: isAddition ? "+" : "-",
+    answer: isAddition ? num1 + num2 : num1 - num2,
+  };
+}
+
+export async function makeMove(gameId: string, answer: number) {
   const session = await auth();
   if (!session?.user?.id) throw new Error("Unauthorized");
   
@@ -18,48 +35,31 @@ export async function makeMove(gameId: string, selectedNumbers: number[]) {
   
   if (roomState.turn !== session.user.id) throw new Error("Not your turn");
 
-  if (selectedNumbers.length !== 2 && selectedNumbers.length !== 3) {
-    throw new Error("You must pick exactly 2 or 3 numbers");
-  }
+  const isCorrect = answer === roomState.problem.answer;
   
-  const sum = selectedNumbers.reduce((a, b) => a + b, 0);
-  if (sum !== 30) {
-    throw new Error("Numbers must sum to 30");
-  }
-
-  for (const num of selectedNumbers) {
-    if (!roomState.board.includes(num)) {
-      throw new Error(`Number ${num} is not on the board`);
-    }
-  }
-
-  roomState.board = roomState.board.filter((n: number) => !selectedNumbers.includes(n));
-  
-  const opponentId = session.user.id === gameRecord.player1Id ? gameRecord.player2Id : gameRecord.player1Id;
-  roomState.turn = opponentId;
-
   roomState.moves.push({
     player: session.user.id,
-    numbers: selectedNumbers
+    problem: `${roomState.problem.num1} ${roomState.problem.operator} ${roomState.problem.num2}`,
+    answer: answer,
+    correct: isCorrect
   });
 
-  let hasValidMove = false;
-  const board = roomState.board;
-  for (let i = 0; i < board.length; i++) {
-    for (let j = i + 1; j < board.length; j++) {
-      if (board[i] + board[j] === 30) hasValidMove = true;
-      for (let k = j + 1; k < board.length; k++) {
-         if (board[i] + board[j] + board[k] === 30) hasValidMove = true;
-      }
-    }
+  if (isCorrect) {
+    roomState.scores[session.user.id] += 1;
   }
+
+  const opponentId = session.user.id === gameRecord.player1Id ? gameRecord.player2Id : gameRecord.player1Id;
+  roomState.turn = opponentId;
 
   let newStatus = gameRecord.status;
   let winnerId = null;
 
-  if (!hasValidMove) {
+  if (roomState.scores[session.user.id] >= 3) {
     newStatus = "finished";
     winnerId = session.user.id;
+  } else {
+    // Generate new problem for the next turn
+    roomState.problem = generateProblem();
   }
 
   await db.update(games)
